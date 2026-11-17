@@ -1,0 +1,41 @@
+{
+    "name": "craftcms/craft-ai-observer",
+    "description": "Observer-agnostic telemetry library for laravel/ai agent activity (used by Craft CMS 6).",
+    "type": "library",
+    "license": "MIT",
+    "keywords": [
+        "craftcms",
+        "laravel",
+        "ai",
+        "observability",
+        "telemetry",
+        "langfuse",
+        "langsmith"
+    ],
+    "require": {
+        "php": "^8.3"
+    },
+    "require-dev": {
+        "carthage-software/mago": "^1.60.2"
+    },
+    "autoload": {
+        "psr-4": {
+            "CraftAiObserver\\": "src/"
+        }
+    },
+    "config": {
+        "sort-packages": true
+    },
+    "scripts": {
+        "check": [
+            "@lint",
+            "@format:check",
+            "@analyze"
+        ],
+        "lint": "mago lint",
+        "lint:fix": "mago lint --fix",
+        "format": "mago format",
+        "format:check": "mago format --check",
+        "analyze": "mago analyze"
+    }
+}

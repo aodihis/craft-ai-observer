@@ -1,0 +1,43 @@
+name: CI
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  checks:
+    name: Mago lint / format / analyze (PHP ${{ matrix.php }})
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        php: ["8.3", "8.5"]
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup PHP
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: ${{ matrix.php }}
+          coverage: none
+          tools: composer:v2
+
+      - name: Install dependencies
+        uses: ramsey/composer-install@v3
+
+      - name: Validate composer.json
+        run: composer validate --no-check-publish
+
+      - name: Lint
+        run: mago lint
+        env:
+          # Mago's Composer wrapper downloads the prebuilt binary on first
+          # run; the token avoids GitHub's anonymous rate limit in CI.
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Format check
+        run: mago format --check
+
+      - name: Static analysis
+        run: mago analyze

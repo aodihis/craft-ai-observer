@@ -3,3 +3,7 @@
 /.vscode/
 .DS_Store
 *.log
+
+# Mago generated baselines (only created on request)
+/linter-baseline.toml
+/analyzer-baseline.toml
