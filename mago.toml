@@ -4,7 +4,7 @@
 # Docs: https://mago.carthage.software/latest/en/guide/configuration/
 
 version = "1"
-# Craft 6 / DDEV run PHP 8.5 (floor declared in composer.json is ^8.3)
+# PHP 8.5 is the floor, the local runtime, and the CI runner (ADR 0003)
 php-version = "8.5"
 
 [source]

@@ -88,8 +88,8 @@ Not up for reinterpretation in a PR. Details and rationale live in `docs/rules/`
 4. Records are immutable value objects (`readonly`) — `src/Model/` classes are enforced by
    `craft/readonly-value-objects`.
 5. Streaming deltas accumulate into the open generation; they are not separate records.
-6. `declare(strict_types=1)`, PSR-12, fully typed, PHP `^8.3` syntax only (local is 8.5; CI runs
-   8.3).
+6. `declare(strict_types=1)`, PSR-12, fully typed, PHP `^8.5` only — the floor, the local runtime,
+   and CI are all 8.5 (ADR 0003).
 
 Breaking one of these is an ADR plus a rule change, never a one-off commit.
 
@@ -98,23 +98,42 @@ Breaking one of these is an ADR plus a rule change, never a one-off commit.
 ## 4. The toolchain is the gate
 
 ```sh
-composer check   # mago lint + format:check + analyze + verify-rules — must be green
+composer check   # mago lint + format:check + analyze + verify-rules + phpunit — must be green
 composer format  # also normalises CRLF (Windows editors) to LF per .gitattributes
 ```
 
 - `composer check` green before you hand anything over. If it fails, the failure is yours to fix.
+- **The pre-commit hook runs it for you.** `composer install` / `composer update` set
+  `core.hooksPath = .githooks`, so `git commit` runs `composer check` and aborts on failure. Fix the
+  cause; `--no-verify` is for emergencies and must not hide a red build.
 - **Do not silence findings.** No baselines, no blanket ignores. A suppression is a last resort and
   must carry a one-line reason in the same docblock (`@mago-expect analysis:mixed-assignment` above
   JSON narrowing is the accepted example in `dev/mago/verify.php`).
-- **Do not work around a project rule.** The rules are the point: comments go above functions or
-  nowhere, no nested/shorthand ternaries, no single-line control structures, no `Log` facade, no
-  comments narrating a line you just changed. Moving a comment to dodge the linter, or splitting one
-  unreadable expression into two unreadable ones, is worse than deleting it.
+- **Do not work around a project rule.** The rules are the point. Moving a comment to dodge the
+  linter, or splitting one unreadable expression into two unreadable ones, is worse than deleting it.
+
+  | Rule | Enforces |
+  | --- | --- |
+  | `craft/comment-placement` | A short comment (≤ 4 lines of prose) only directly above a function, method or class; no inline notes, no comments above statements/properties/constants. Tag-only docblocks (`@var`, …) anywhere. |
+  | `craft/forbidden-imports` | No `Craft\`, `Langfuse\`, `LangSmith\`, `OpenTelemetry\`, `Psr\Http\`, `GuzzleHttp\` references. |
+  | `craft/no-facade-log` | No `Log` facade, import or call; inject `Psr\Log\LoggerInterface`. |
+  | `craft/no-single-line-control-structure` | No `if ($x) { return; }`, one-line loop bodies, one-line `else`/`elseif`. |
+  | `craft/readonly-value-objects` | Classes under `src/Model/` are `readonly`. |
+
+  Built-ins raised to `error` in mago.toml: `no-nested-ternary`, `no-shorthand-ternary` (`$a ?: $b`),
+  `block-statement` (unbraced bodies). The custom rules live in `dev/mago/src/`, are registered by
+  `.mago/craft-worker.php`, and are proven by `dev/mago/fixtures/` + `composer verify-rules` — a rule
+  change without a fixture change is an unfinished change.
 - **Tests.** PHPUnit (`composer test`), run by `composer check`. Unit tests for logic, feature tests
   for framework wiring (`Illuminate\Events\Dispatcher`, container resolution) — test behaviour through
   the public API, no bespoke harness, no implementation-detail assertions.
-- **CI** (`.github/workflows/ci.yml`) runs `composer check` on PHP 8.3 and 8.5. It has no other
-  hidden requirements; if it passes locally it passes there.
+- **CI is manual.** `.github/workflows/ci.yml` only triggers on `workflow_dispatch` — run it
+  yourself when you want it: `gh workflow run CI --ref main`, or Actions → CI → Run workflow.
+  Nothing fires on push or pull request, so a green local `composer check` is the only automatic
+  gate; do not describe CI as having run unless you dispatched it.
+- **PHP is 8.5, everywhere.** The floor in composer.json, `config.platform.php`, the mago target, and
+  the CI runner say 8.5 — do not write code that only works below it, and do not reintroduce an
+  older floor in one place without changing all four.
 
 ---
 

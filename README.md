@@ -33,8 +33,8 @@ config) to register no listener at all.
 
 The toolchain is [mago](https://mago.carthage.software) (Rust-based linter,
 formatter, static analyzer), pinned via Composer (`carthage-software/mago`).
-PHP `8.5` is the analysis target (Craft 6 / DDEV runtime); the declared floor
-is `^8.3`.
+PHP `^8.5` is the floor, the local runtime, and the CI runner — the same version
+Craft 6 runs.
 
 ```sh
 composer install
@@ -43,35 +43,16 @@ composer lint      # mago lint
 composer lint:fix  # mago lint --fix
 composer format    # mago format
 composer analyze   # mago analyze
-composer verify-rules  # exercise the custom rules against dev/mago/fixtures
+composer verify-rules  # assert dev/mago/fixtures findings
 composer test      # phpunit
 ```
 
-### Custom linter rules
+`composer install` points `core.hooksPath` at `.githooks/`, so **every commit runs
+`composer check`** and is rejected if lint, format, analysis, fixtures, or tests
+fail (`git commit --no-verify` bypasses it).
 
-Mago is extended with project rules that encode [working rules](docs/rules/):
-
-| Rule | Enforces |
-| --- | --- |
-| `craft/comment-placement` | A short comment (≤ 4 lines of prose) only directly above a function, method or class; no inline notes or comments above statements, properties or constants. Tag-only docblocks (`@var`, …) are allowed anywhere. |
-| `craft/forbidden-imports` | No `Craft\`, `Langfuse\`, `LangSmith\`, `OpenTelemetry\`, `Psr\Http\`, or `GuzzleHttp\` references — exporter code and host integration belong in adapter plugins (`docs/rules/architecture.md`). |
-| `craft/no-facade-log` | No `Log` facade imports or calls; inject a `Psr\Log\LoggerInterface` (`docs/rules/backend.md`). |
-| `craft/no-single-line-control-structure` | No `if ($x) { return; }` / one-line loop bodies; the condition, braces and body get their own lines. |
-| `craft/readonly-value-objects` | Classes under `src/Model/` must be declared `readonly` (`docs/rules/backend.md`). |
-
-Three built-in rules are also raised from warning/note to `error` in `mago.toml`:
-`no-nested-ternary`, `no-shorthand-ternary` (`$a ?: $b`), and
-`block-statement` (unbraced `if`/loop bodies).
-
-They live in `dev/mago/src/` (Mago PHP SDK) and are registered by the
-`.mago/craft-worker.php` extension host configured in `mago.toml`:
+CI is manual and runs the same gate on PHP 8.5:
 
 ```sh
-mago extension list     # registered rules
-mago extension validate # worker handshake
+gh workflow run CI --ref main   # or: Actions → CI → Run workflow
 ```
-
-`dev/mago/fixtures/` holds one fixture per rule plus clean counterparts. They
-are excluded from the normal run (they violate the rules on purpose) and are
-only linted by `dev/mago/verify.php` through `dev/mago/fixtures/mago.toml`,
-which asserts the exact set of findings (`composer verify-rules`).

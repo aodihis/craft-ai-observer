@@ -1,17 +1,19 @@
 name: CI
 
+# Manual only: nothing runs on push or pull request.
+#
+# Commits are gated locally by `.githooks/pre-commit` (composer check), so CI is
+# the "verify the declared PHP floor too" step, run on purpose:
+#
+#   gh workflow run CI --ref main      # or: Actions → CI → Run workflow
+#
 on:
-  push:
-  pull_request:
+  workflow_dispatch:
 
 jobs:
   checks:
-    name: Mago lint / format / analyze (PHP ${{ matrix.php }})
+    name: composer check (PHP 8.5)
     runs-on: ubuntu-latest
-    strategy:
-      fail-fast: false
-      matrix:
-        php: ["8.3", "8.5"]
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -19,7 +21,7 @@ jobs:
       - name: Setup PHP
         uses: shivammathur/setup-php@v2
         with:
-          php-version: ${{ matrix.php }}
+          php-version: "8.5"
           coverage: none
           tools: composer:v2
 
@@ -29,10 +31,7 @@ jobs:
       - name: Validate composer.json
         run: composer validate --no-check-publish
 
-      - name: Lint, format check, analyze, rule fixtures
-        # `composer check` runs mago through vendor/bin, and ends with
-        # `verify-rules`, which exercises the custom rules in dev/mago/src
-        # against dev/mago/fixtures.
+      - name: Lint, format check, analyze, rule fixtures, tests
         run: composer check
         env:
           # Mago's Composer wrapper downloads the prebuilt binary on first
