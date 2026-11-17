@@ -14,11 +14,13 @@ final class NoisyComments
 
     public function run(int $value): int
     {
-        // clamp the value
-        if ($value > self::LIMIT) {
-            return self::LIMIT; // never above the limit
+        // limit it
+        $value = min($value, self::LIMIT); // never above the limit
+
+        if ($value > 0) {
+            return $value;
         }
 
-        return $value;
+        return 0;
     }
 }

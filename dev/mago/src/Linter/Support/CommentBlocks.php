@@ -4,8 +4,12 @@ declare(strict_types=1);
 
 namespace CraftAiObserver\Dev\Mago\Linter\Support;
 
+use Mago\Sdk\Span;
 use Mago\Sdk\Syntax\NodeKind;
 use Mago\Sdk\Syntax\SourceFile;
+use Mago\Sdk\Syntax\Trivia;
+
+use function trim;
 
 /**
  * Splits a file's comments into blocks of consecutive comment lines.
@@ -24,18 +28,22 @@ final readonly class CommentBlocks
         $lines = new SourceLines($file->contents);
         $blocks = [];
         $current = [];
-        $previousEndLine = null;
+        $previous = null;
 
         foreach ($file->getTrivia() as $comment) {
-            $isGap = $previousEndLine !== null && $lines->startLine($comment->span) > ( $previousEndLine + 1 );
+            if ($previous instanceof Trivia && $current !== []) {
+                $between = $file->getText(new Span($previous->span->end, $comment->span->start));
+                $nextLine = $lines->startLine($comment->span);
+                $isSeparated = trim($between) !== '' || $nextLine > ( $lines->endLine($previous->span) + 1 );
 
-            if ($isGap && $current !== []) {
-                $blocks[] = new CommentBlock($file, $current);
-                $current = [];
+                if ($isSeparated) {
+                    $blocks[] = new CommentBlock($file, $current);
+                    $current = [];
+                }
             }
 
             $current[] = $comment;
-            $previousEndLine = $lines->endLine($comment->span);
+            $previous = $comment;
         }
 
         if ($current !== []) {
