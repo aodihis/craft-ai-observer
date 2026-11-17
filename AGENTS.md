@@ -120,9 +120,14 @@ composer format  # also normalises CRLF (Windows editors) to LF per .gitattribut
 
 ## 5. Commits
 
-Conventional Commits (`feat:`, `fix:`, `chore:`, `docs:`, `test:`), one logical change per commit.
-The message states what changed and why in a sentence or two — the rules and fixtures that moved
-with it are worth a line, since that is where reviewers look.
+**Never commit, amend, or push unless you are asked to.** Leave every change in the working tree
+(staged or not) and stop. The maintainer reviews the diff first; a commit that appeared without
+being asked for is out of bounds, however green `composer check` is. This includes "helpful"
+follow-up commits for a small fix you noticed along the way.
+
+When you are asked to commit: Conventional Commits (`feat:`, `fix:`, `chore:`, `docs:`, `test:`),
+one logical change per commit. The message states what changed and why in a sentence or two — the
+rules and fixtures that moved with it are worth a line, since that is where reviewers look.
 
 ## 6. Done means
 
