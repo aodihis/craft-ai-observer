@@ -11,6 +11,9 @@ forward to their platform.
 - [Engineering decisions (ADR)](docs/decision/)
 - [Working rules](docs/rules/)
 
+Changing this package? Read [AGENTS.md](AGENTS.md) first — it holds the
+constraints (docs workflow, simplicity, what the tooling refuses to accept).
+
 ## Development
 
 The toolchain is [mago](https://mago.carthage.software) (Rust-based linter,

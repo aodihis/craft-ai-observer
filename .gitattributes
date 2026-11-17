@@ -2,6 +2,7 @@
 # (`.gitattributes` `export-ignore` — GitHub release archives and Composer
 #  dist downloads honor these rules)
 /docs/            export-ignore
+/AGENTS.md        export-ignore
 /tests/           export-ignore
 /.github/         export-ignore
 /.mago/           export-ignore
