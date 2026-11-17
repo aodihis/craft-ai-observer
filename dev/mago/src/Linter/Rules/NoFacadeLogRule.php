@@ -18,19 +18,10 @@ use function str_ends_with;
 use function strtolower;
 
 /**
- * Enforces docs/rules/backend.md:
- *
- * > Listeners must not throw: wrap adapter dispatch in try/catch and log via
- * > `Psr\Log\LoggerInterface` (injected, never `Log::` facades at package
- * > level).
- *
- * Flags every reference to the `Log` facade — the import, the call site, and
- * fully-qualified `\Illuminate\Support\Facades\Log` usage.
- *
- * The root `Log` alias is unresolvable outside a Laravel bootstrap (mago
- * resolves it to `<current namespace>\Log`), so the *written* text of the
- * resolved span is what gets matched: `Log` or any `…\Facades\Log`.
- *
+ * Bans references to the `Log` facade — import, call site, and FQN usage.
+ * The root `Log` alias resolves to `<namespace>\Log` outside a Laravel
+ * bootstrap, so the written text of the resolved span is matched instead.
+ * See docs/rules/backend.md.
  * @internal
  */
 final class NoFacadeLogRule implements Rule
@@ -70,7 +61,6 @@ final class NoFacadeLogRule implements Rule
         try {
             $written = strtolower(ltrim(string: $context->file->getText($resolved->span), characters: '\\'));
         } catch (InvalidArgumentException) {
-            // Span outside the source text: not something this rule can judge.
             return false;
         }
 

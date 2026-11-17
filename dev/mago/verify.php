@@ -2,32 +2,20 @@
 
 declare(strict_types=1);
 
-/**
- * Verifies the project's custom Mago linter rules (dev/mago/src) against the
- * committed fixtures:
- *
- *  - `dev/mago/fixtures/violations/` must produce exactly the expected findings;
- *  - `dev/mago/fixtures/clean/` must produce none.
- *
- * The fixtures are excluded from the normal `mago` run (see the root
- * mago.toml), and are linted here through `dev/mago/fixtures/mago.toml`.
- *
- * Usage: `php dev/mago/verify.php` (or `composer verify-rules`).
- */
-
 namespace CraftAiObserver\Dev\Mago;
 
 use RuntimeException;
 
-/**
- * Expected findings per fixture, relative to `dev/mago/fixtures/`.
- */
 const EXPECTED = [
     'violations/src/ImportsObserverSdk.php' => ['craft/forbidden-imports' => 2],
-    'violations/src/UsesAliasedFacadeLog.php' => ['craft/no-facade-log' => 1],
-    'violations/src/UsesFacadeLog.php' => [
-        'craft/no-facade-log' => 2 // the `use` statement + the `Log::info()` call site
+    'violations/src/NoisyComments.php' => ['craft/comment-placement' => 3],
+    'violations/src/OneLineBranches.php' => [
+        'craft/no-single-line-control-structure' => 3,
+        'block-statement' => 1
     ],
+    'violations/src/TernarySoup.php' => ['no-nested-ternary' => 1],
+    'violations/src/UsesAliasedFacadeLog.php' => ['craft/no-facade-log' => 1],
+    'violations/src/UsesFacadeLog.php' => ['craft/no-facade-log' => 2],
     'violations/src/Model/MutableTrace.php' => ['craft/readonly-value-objects' => 1]
 ];
 
@@ -59,7 +47,7 @@ function run(array $command, string $workingDirectory): array
     }
 
     $output = (string) stream_get_contents($stdout);
-    stream_get_contents($stderr); // drain, so the child never blocks on a full pipe
+    stream_get_contents($stderr);
     fclose($stdout);
     fclose($stderr);
 
@@ -81,8 +69,7 @@ function read_findings(string $output, int $exitCode): array
     $report = json_decode($output, associative: true);
 
     if (!is_array($report) || !is_array($report['issues'] ?? null)) {
-        throw new RuntimeException("Unexpected mago output (exit {$exitCode}):
-" . $output);
+        throw new RuntimeException("Unexpected mago output (exit {$exitCode}): " . $output);
     }
 
     $findings = [];
@@ -144,6 +131,23 @@ function fixture_path_from(array $issue): ?string
 
 /**
  * @param array<string, array<string, int>> $findings
+ *
+ * @return array<string, array<string, int>> sorted by fixture, then by rule
+ */
+function sorted(array $findings): array
+{
+    ksort($findings);
+
+    foreach ($findings as $path => $codes) {
+        ksort($codes);
+        $findings[$path] = $codes;
+    }
+
+    return $findings;
+}
+
+/**
+ * @param array<string, array<string, int>> $findings
  */
 function describe(array $findings): string
 {
@@ -170,7 +174,8 @@ $result = run([
     'dev/mago/fixtures/mago.toml',
     'lint',
     '--only',
-    'craft/forbidden-imports,craft/no-facade-log,craft/readonly-value-objects',
+    'block-statement,craft/comment-placement,craft/forbidden-imports,craft/no-facade-log,'
+        . 'craft/no-single-line-control-structure,craft/readonly-value-objects,no-nested-ternary',
     '--reporting-format',
     'json'
 ], $projectRoot);
@@ -193,6 +198,10 @@ foreach (read_findings($result['output'], $result['exit_code']) as $finding) {
 ksort($violations);
 $expected = EXPECTED;
 ksort($expected);
+
+$violations = sorted($violations);
+$expected = sorted($expected);
+$clean = sorted($clean);
 
 if ($violations !== $expected || $clean !== []) {
     fwrite(STDERR, "Custom linter rule fixtures drifted.\n\nExpected:\n" . describe($expected) . "\n\n");

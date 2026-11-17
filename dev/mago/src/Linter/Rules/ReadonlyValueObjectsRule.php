@@ -17,13 +17,8 @@ use function str_contains;
 use function str_replace;
 
 /**
- * Enforces docs/rules/backend.md:
- *
- * > Records are value objects (readonly), PSR-12, strict_types, typed.
- *
- * Classes declared under `src/Model/` (Trace, Generation, Span, ToolCall,
- * Metrics, …) must be `readonly`.
- *
+ * Classes under `src/Model/` (Trace, Generation, Span, ToolCall, Metrics, …)
+ * are value objects and must be `readonly`. See docs/rules/backend.md.
  * @internal
  */
 final class ReadonlyValueObjectsRule implements Rule
@@ -87,8 +82,6 @@ final class ReadonlyValueObjectsRule implements Rule
         try {
             return $context->file->getText($modifier);
         } catch (InvalidArgumentException) {
-            // Snapshot without source text: cannot inspect the modifier, so
-            // treat the class as conformant rather than reporting noise.
             return '';
         }
     }

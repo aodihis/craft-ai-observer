@@ -24,8 +24,27 @@ literal-separator = true
 # Enables PHPUnit/Pest-aware linter rules for the test suite.
 integrations = ["phpunit"]
 
+# Built-in rules raised to errors where they express a project rule.
+#
+# no-nested-ternary      — no `$a ? ($b ? 1 : 2) : 3`
+# block-statement        — no unbraced `if (...)` / loop bodies
+# no-shorthand-ternary   — no `$a ?: $b`
+[linter.rules.no-nested-ternary]
+level = "error"
+
+[linter.rules.block-statement]
+level = "error"
+
+[linter.rules.no-shorthand-ternary]
+level = "error"
+
 # Custom project rules (see dev/mago/src/Linter/Rules/). The host spawns
-# `.mago/craft-worker.php`, which registers the extension's rules.
+# `.mago/craft-worker.php`, which registers the extension's rules:
+#   craft/comment-placement                comments only above declarations
+#   craft/forbidden-imports                no exporter / Craft references
+#   craft/no-facade-log                    no Log facade
+#   craft/no-single-line-control-structure no `if ($x) { ... }` one-liners
+#   craft/readonly-value-objects           src/Model/ classes are readonly
 [extension-hosts.craft]
 command = ["php", ".mago/craft-worker.php"]
 

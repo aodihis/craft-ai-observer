@@ -24,6 +24,15 @@
 5. Records are value objects (readonly), PSR-12, strict_types, typed.
 6. Tests: Pest or PHPUnit, focused on TreeBuilder and event mapping
    (including crash-mid-run and streaming accumulation cases).
+7. Comments document an API, not the code: a short docblock (at most four
+   lines of prose) directly above a function, method, or class. No inline
+   notes, no comment above a statement, property, or constant. Tag-only
+   docblocks (`@var`, `@mago-expect`, …) are allowed anywhere because tools
+   read them.
+8. No nested or shorthand ternaries (`$a ? ($b ? 1 : 2) : 3`, `$a ?: $b`);
+   use `if`/`match` instead.
+9. No single-line control structures (`if ($x) { return; }`) and no unbraced
+   bodies: the condition, each brace, and the body get their own line.
 
 ## Versioning
 

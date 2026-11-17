@@ -4,8 +4,10 @@ declare(strict_types=1);
 
 namespace CraftAiObserver\Dev\Mago;
 
+use CraftAiObserver\Dev\Mago\Linter\Rules\CommentPlacementRule;
 use CraftAiObserver\Dev\Mago\Linter\Rules\ForbiddenImportsRule;
 use CraftAiObserver\Dev\Mago\Linter\Rules\NoFacadeLogRule;
+use CraftAiObserver\Dev\Mago\Linter\Rules\NoSingleLineControlStructureRule;
 use CraftAiObserver\Dev\Mago\Linter\Rules\ReadonlyValueObjectsRule;
 use Mago\Sdk\Extension;
 
@@ -27,8 +29,10 @@ final class CraftAiObserverExtension
             name: 'Craft AI Observer project rules',
             version: '0.1.0',
             linterRules: [
+                new CommentPlacementRule(),
                 new ForbiddenImportsRule(),
                 new NoFacadeLogRule(),
+                new NoSingleLineControlStructureRule(),
                 new ReadonlyValueObjectsRule()
             ]
         );

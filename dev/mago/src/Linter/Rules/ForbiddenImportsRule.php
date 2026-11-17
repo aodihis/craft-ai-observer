@@ -16,39 +16,20 @@ use function str_starts_with;
 use function strtolower;
 
 /**
- * Enforces the architecture rules from docs/rules/architecture.md:
- *
- * > The library has no exporter. No Langfuse/LangSmith/OTLP code, no HTTP
- * > clients, no credentials.
- * > No dependency on `craftcms/cms`. The library must work in any Laravel app.
- *
- * Every resolved name in the file is checked, so the rule catches imports
- * (`use`), type hints, `catch` clauses, attribute classes, instantiations and
- * static references alike. The `Log` facade is deliberately *not* listed here;
- * `craft/no-facade-log` owns every reference to it.
- *
- * The rule targets the file's `Program` node and reports on the resolved-name
- * spans: mago invokes rules per matching node, and a `use` statement plus its
- * inner qualified identifier share one span, so per-node targeting would report
- * the same offset twice.
- *
+ * Bans references to Craft, observer SDKs, HTTP clients and OTLP: importer
+ * code and host integration belong in adapter plugins. Every resolved name is
+ * checked, so imports, type hints, catch clauses and attribute classes are all
+ * caught. See docs/rules/architecture.md.
  * @internal
  */
 final class ForbiddenImportsRule implements Rule
 {
-    /**
-     * Fully qualified name prefixes that must never appear in the library.
-     * Trailing `\` prevents partial-name matches (e.g. `Craft\` never matches
-     * `CraftAiObserver\`).
-     *
-     * @var non-empty-list<non-empty-string>
-     */
     private const array FORBIDDEN_PREFIXES = [
-        'Craft\\', // craftcms/cms — library must be host-agnostic
-        'Langfuse\\', // observer SDKs belong in adapter plugins
+        'Craft\\',
+        'Langfuse\\',
         'LangSmith\\',
         'OpenTelemetry\\',
-        'Psr\\Http\\', // no HTTP clients / export code
+        'Psr\\Http\\',
         'GuzzleHttp\\'
     ];
 
