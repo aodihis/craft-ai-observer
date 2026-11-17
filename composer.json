@@ -13,10 +13,14 @@
         "langsmith"
     ],
     "require": {
-        "php": "^8.3"
+        "php": "^8.3",
+        "illuminate/support": "^12.0|^13.0",
+        "laravel/ai": "^1.4",
+        "psr/log": "^3.0"
     },
     "require-dev": {
-        "carthage-software/mago": "^1.60.2"
+        "carthage-software/mago": "^1.60.2",
+        "phpunit/phpunit": "^12.0"
     },
     "autoload": {
         "psr-4": {
@@ -25,7 +29,8 @@
     },
     "autoload-dev": {
         "psr-4": {
-            "CraftAiObserver\\Dev\\Mago\\": "dev/mago/src/"
+            "CraftAiObserver\\Dev\\Mago\\": "dev/mago/src/",
+            "CraftAiObserver\\Tests\\": "tests/"
         }
     },
     "config": {
@@ -36,13 +41,22 @@
             "@lint",
             "@format:check",
             "@analyze",
-            "@verify-rules"
+            "@verify-rules",
+            "@test"
         ],
         "lint": "mago lint",
         "lint:fix": "mago lint --fix",
         "format": "mago format",
         "format:check": "mago format --check",
         "analyze": "mago analyze",
-        "verify-rules": "php dev/mago/verify.php"
+        "verify-rules": "php dev/mago/verify.php",
+        "test": "phpunit"
+    },
+    "extra": {
+        "laravel": {
+            "providers": [
+                "CraftAiObserver\\ServiceProvider"
+            ]
+        }
     }
 }

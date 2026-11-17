@@ -35,7 +35,10 @@ laravel/ai events (Laravel Event dispatcher)
 6. **Streaming is handled here.** `AgentStreamed` deltas accumulate into a
    pending generation record; the record closes on the terminal step event.
 
-## Package shape (when we get there)
+## Package shape
+
+`Listener/`, `ServiceProvider.php`, `config/` and `tests/` exist;
+`Model/` and `Tree/` are next (the listener is where they get wired).
 
 ```
 craft-ai-observer/

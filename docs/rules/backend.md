@@ -6,8 +6,9 @@
 ## Environment
 
 - PHP `^8.3` (matches `laravel/ai` requirement; Craft 6 / DDEV run 8.5).
-- Depends only on what is needed to listen: `illuminate/events` (or the
-  `laravel/ai` event classes, which come free with Craft 6), `php 8.3+`.
+- `laravel/ai ^1.4` — the events are our contract, so the dependency is
+  declared rather than assumed; `illuminate/support ^12|^13` for the service
+  provider and event dispatcher, `psr/log ^3` for the injected logger.
 - No dependency on `craftcms/cms`. The library must work in any Laravel
   app that uses `laravel/ai`.
 

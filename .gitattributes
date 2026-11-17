@@ -12,6 +12,7 @@
 /composer.json    export-ignore
 /composer.lock    export-ignore
 /mago.toml        export-ignore
+/phpunit.xml      export-ignore
 /.editorconfig    export-ignore
 
 # PSR-12 requires LF line endings (F.1) — normalize on check-in

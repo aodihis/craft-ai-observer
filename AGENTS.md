@@ -110,9 +110,9 @@ composer format  # also normalises CRLF (Windows editors) to LF per .gitattribut
   nowhere, no nested/shorthand ternaries, no single-line control structures, no `Log` facade, no
   comments narrating a line you just changed. Moving a comment to dodge the linter, or splitting one
   unreadable expression into two unreadable ones, is worse than deleting it.
-- **Tests.** `tests/` is empty for now. When you add them, use PHPUnit (mago's `phpunit` integration
-  is already enabled) and test behaviour through the public API — no bespoke harness, no
-  implementation-detail assertions.
+- **Tests.** PHPUnit (`composer test`), run by `composer check`. Unit tests for logic, feature tests
+  for framework wiring (`Illuminate\Events\Dispatcher`, container resolution) — test behaviour through
+  the public API, no bespoke harness, no implementation-detail assertions.
 - **CI** (`.github/workflows/ci.yml`) runs `composer check` on PHP 8.3 and 8.5. It has no other
   hidden requirements; if it passes locally it passes there.
 

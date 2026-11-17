@@ -13,8 +13,14 @@ php-version = "8.5"
 paths = ["src", "tests", "dev"]
 excludes = ["dev/mago/fixtures/**"]
 # Scanned for symbol resolution only (never linted/analyzed): the extension
-# SDK the custom rules implement.
-includes = ["vendor/carthage-software/mago/composer/src"]
+# SDK the custom rules implement, and the packages src/ is written against.
+includes = [
+    "vendor/carthage-software/mago/composer/src",
+    "vendor/illuminate",
+    "vendor/laravel/ai/src",
+    "vendor/phpunit",
+    "vendor/psr",
+]
 
 [source.glob]
 # `*` matches one directory level, `**` is recursive (gitignore-style).

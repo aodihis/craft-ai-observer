@@ -14,6 +14,21 @@ forward to their platform.
 Changing this package? Read [AGENTS.md](AGENTS.md) first — it holds the
 constraints (docs workflow, simplicity, what the tooling refuses to accept).
 
+## Using it in Craft 6
+
+The package registers itself: `composer.json` lists `CraftAiObserver\ServiceProvider`
+under `extra.laravel.providers`, so Laravel's package discovery in a Craft 6
+install boots it with no wiring. It listens to the laravel/ai agent events and
+reports what it receives through the injected `Psr\Log\LoggerInterface` (the
+`debug` level), which is where the normalized records will land next.
+
+```sh
+php craft vendor:publish --tag=ai-observer-config   # optional: copy config/ai-observer.php
+```
+
+Set `AI_OBSERVER_ENABLED=false` (or `'enabled' => false` in the published
+config) to register no listener at all.
+
 ## Development
 
 The toolchain is [mago](https://mago.carthage.software) (Rust-based linter,
@@ -23,12 +38,13 @@ is `^8.3`.
 
 ```sh
 composer install
-composer check     # lint + format:check + analyze + verify-rules
+composer check     # lint + format:check + analyze + verify-rules + test
 composer lint      # mago lint
 composer lint:fix  # mago lint --fix
 composer format    # mago format
 composer analyze   # mago analyze
 composer verify-rules  # exercise the custom rules against dev/mago/fixtures
+composer test      # phpunit
 ```
 
 ### Custom linter rules
