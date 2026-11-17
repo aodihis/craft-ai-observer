@@ -23,6 +23,11 @@
             "CraftAiObserver\\": "src/"
         }
     },
+    "autoload-dev": {
+        "psr-4": {
+            "CraftAiObserver\\Dev\\Mago\\": "dev/mago/src/"
+        }
+    },
     "config": {
         "sort-packages": true
     },
@@ -30,12 +35,14 @@
         "check": [
             "@lint",
             "@format:check",
-            "@analyze"
+            "@analyze",
+            "@verify-rules"
         ],
         "lint": "mago lint",
         "lint:fix": "mago lint --fix",
         "format": "mago format",
         "format:check": "mago format --check",
-        "analyze": "mago analyze"
+        "analyze": "mago analyze",
+        "verify-rules": "php dev/mago/verify.php"
     }
 }

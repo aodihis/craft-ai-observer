@@ -29,15 +29,12 @@ jobs:
       - name: Validate composer.json
         run: composer validate --no-check-publish
 
-      - name: Lint
-        run: mago lint
+      - name: Lint, format check, analyze, rule fixtures
+        # `composer check` runs mago through vendor/bin, and ends with
+        # `verify-rules`, which exercises the custom rules in dev/mago/src
+        # against dev/mago/fixtures.
+        run: composer check
         env:
           # Mago's Composer wrapper downloads the prebuilt binary on first
           # run; the token avoids GitHub's anonymous rate limit in CI.
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-
-      - name: Format check
-        run: mago format --check
-
-      - name: Static analysis
-        run: mago analyze
