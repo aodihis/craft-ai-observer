@@ -148,7 +148,37 @@ When you are asked to commit: Conventional Commits (`feat:`, `fix:`, `chore:`, `
 one logical change per commit. The message states what changed and why in a sentence or two — the
 rules and fixtures that moved with it are worth a line, since that is where reviewers look.
 
-## 6. Done means
+## 6. Branches and merges
+
+`main` is protected by the **"main: PR + owner approval"** ruleset (rulesets, not the legacy branch
+protection API). On `main`:
+
+- no direct pushes, no force pushes, no deletion;
+- a **pull request** is required, with **1 approving review**, and a code-owner review
+  (`.github/CODEOWNERS` = `@aodihis`, so in practice the owner's approval);
+- stale approvals are dismissed when new commits are pushed, and all review threads must be
+  resolved;
+- the repository admin role — i.e. the owner — **bypasses** the ruleset. `gh pr merge --admin`, or a
+direct push, still works. That bypass is deliberate; do not treat it as a normal path.
+
+**Status checks are intentionally not required.** CI is manual (`workflow_dispatch`), so a required
+check would never report and every PR would be blocked forever. Do not add one without also making CI
+run on `pull_request` — that is a deliberate decision, not an oversight.
+
+**Every change starts on a `feature/<slug>` branch**, never on `main`:
+
+```sh
+git switch -c feature/trace-builder
+# work, `composer check` green (the pre-commit hook enforces it)
+git push -u origin feature/trace-builder
+gh pr create --base main --fill
+git branch -d feature/trace-builder     # after the merge
+```
+
+GitHub deletes the merged branch automatically (`delete_branch_on_merge`), so the remote side takes
+care of itself. Do not branch off a merge commit chain by habit — branch off the tip of `main`.
+
+## 7. Done means
 
 - `composer check` green.
 - `docs/` updated in the same commit — or deliberately not, and you said why.

@@ -1,0 +1,5 @@
+# Every change to the default branch needs the owner's review, which is what
+# the "main: PR + owner approval" ruleset turns into a required code-owner
+# approval. Add a narrower rule above this one if a path ever needs a different
+# owner; the last matching pattern wins.
+* @aodihis
