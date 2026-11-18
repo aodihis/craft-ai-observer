@@ -21,14 +21,38 @@ logic, and the neutral records; a **plugin** decides whether to use them and
 where the data goes (ADR 0004). Inside a plugin:
 
 ```php
-// Plugin::init() or the plugin's service provider
-Event::listen(AgentEventListener::EVENTS, AgentEventListener::class);
-Event::listen(TraceCompleted::class, ForwardTraceToLangfuse::class);
+final class LangfuseListener extends AgentEventListener
+{
+    /**
+     * Optional: trim or redact before anything leaves the library.
+     */
+    protected function prepare(Trace $trace): ?Trace
+    {
+        return $trace->limit(4000);
+    }
+
+    /**
+     * Required: queue it, store it, send it — the plugin's decision.
+     */
+    protected function record(Trace $trace): void
+    {
+        SendTraceToLangfuse::dispatch($trace->toArray())->onQueue('ai');
+    }
+}
 ```
 
-The first line is the switch: without it the package does no work. `TraceCompleted`
-carries the normalized `Trace`; the plugin maps it to its platform, holds the
-credentials, flushes, and writes its own lines to Craft's system log.
+```php
+// Plugin::init() or the plugin's service provider
+Event::subscribe(LangfuseListener::class);            // the switch
+```
+
+Subscribing (rather than `listen()`) resolves the listener once, which is what
+keeps its open traces alive between events. Without that line the package does
+no work at all. The trace carries ids, model, input and output, token metrics
+and latency, error, timestamps, `generations`, and `tool_calls`;
+`Trace::toArray()` is the serialized shape an adapter sends. Storage, queueing,
+transport, credentials and the plugin's own system-log lines all live in the
+subclass.
 
 ## Development
 

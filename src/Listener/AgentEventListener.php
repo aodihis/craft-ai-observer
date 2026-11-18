@@ -4,6 +4,9 @@ declare(strict_types=1);
 
 namespace CraftAiObserver\Listener;
 
+use CraftAiObserver\Model\Trace;
+use CraftAiObserver\Tree\TreeBuilder;
+use Illuminate\Contracts\Events\Dispatcher;
 use Laravel\Ai\Events\{
     AgentFailed,
     AgentPrompted,
@@ -21,11 +24,12 @@ use Psr\Log\LoggerInterface;
 use Throwable;
 
 /**
- * Receives the laravel/ai agent events that make up an agent run and hands
- * them to the observer. Registered by the service provider; it must never
- * throw into the host application. See docs/rules/logic.md.
+ * The extension point: a plugin subclasses this, registers it with
+ * `Event::subscribe()`, and overrides the hooks to decide what happens to the
+ * structured trace. Storage, queueing, and transport live in the subclass.
+ * See docs/rules/logic.md.
  */
-class AgentEventListener
+abstract class AgentEventListener
 {
     /**
      * @var non-empty-list<class-string>
@@ -45,17 +49,38 @@ class AgentEventListener
     ];
 
     public function __construct(
-        protected readonly LoggerInterface $logger
+        private readonly TreeBuilder $tree,
+        private readonly LoggerInterface $logger
     ) {
     }
 
     /**
-     * Handle a laravel/ai agent event.
+     * Register this listener for every agent event, in the host dispatcher.
      */
-    public function handle(object $event): void
+    final public function subscribe(Dispatcher $events): void
+    {
+        foreach (self::EVENTS as $event) {
+            $events->listen($event, [$this, 'handle']);
+        }
+    }
+
+    /**
+     * Fold one event into its trace and hand the finished trace to the hooks.
+     */
+    final public function handle(object $event): void
     {
         try {
-            $this->logger->debug('AI observer received {event}.', ['event' => $event::class] + $this->context($event));
+            $trace = $this->tree->push($event);
+
+            if ($trace === null) {
+                return;
+            }
+
+            $prepared = $this->prepare($trace);
+
+            if ($prepared !== null) {
+                $this->record($prepared);
+            }
         } catch (Throwable $exception) {
             $this->logger->error('AI observer could not record {event}.', [
                 'event' => $event::class,
@@ -65,41 +90,16 @@ class AgentEventListener
     }
 
     /**
-     * The correlation ids of an event, keyed by their neutral name.
-     *
-     * @return array<non-empty-string, string|int|float>
+     * Shape the trace before it leaves the library: trim it (`Trace::limit()`),
+     * redact it, or return `null` to drop it. The default passes it unchanged.
      */
-    protected function context(object $event): array
+    protected function prepare(Trace $trace): ?Trace
     {
-        return match (true) {
-            $event instanceof PromptingAgent => ['trace_id' => $event->invocationId],
-            $event instanceof StartingStep => [
-                'trace_id' => $event->invocationId,
-                'step' => $event->stepNumber,
-                'model' => $event->model
-            ],
-            $event instanceof StepCompleted, $event instanceof StepFailed => [
-                'trace_id' => $event->invocationId,
-                'step' => $event->stepNumber,
-                'model' => $event->model,
-                'milliseconds' => $event->time
-            ],
-            $event instanceof InvokingTool => [
-                'trace_id' => $event->invocationId,
-                'tool_invocation_id' => $event->toolInvocationId
-            ],
-            $event instanceof ToolInvoked, $event instanceof ToolFailed => [
-                'trace_id' => $event->invocationId,
-                'tool_invocation_id' => $event->toolInvocationId,
-                'milliseconds' => $event->time
-            ],
-            $event instanceof AgentPrompted => ['trace_id' => $event->invocationId],
-            $event instanceof AgentFailed => [
-                'trace_id' => $event->invocationId,
-                'error' => $event->exception::class,
-                'error_message' => $event->exception->getMessage()
-            ],
-            default => []
-        };
+        return $trace;
     }
+
+    /**
+     * Take the finished trace: queue it, store it, send it, or ignore it.
+     */
+    abstract protected function record(Trace $trace): void;
 }
