@@ -23,9 +23,9 @@ class TreeBuilderTest extends TestCase
     {
         $tree = $this->tree();
 
-        $this->assertNull($tree->push($this->prompting()));
-        $this->assertNull($tree->push($this->startingStep()));
-        $this->assertNull($tree->push(new stdClass()));
+        $this->assertSame([], $tree->push($this->prompting()));
+        $this->assertSame([], $tree->push($this->startingStep()));
+        $this->assertSame([], $tree->push(new stdClass()));
     }
 
     #[Test]
@@ -34,7 +34,7 @@ class TreeBuilderTest extends TestCase
         $tree = $this->tree();
         $tree->push($this->prompting());
 
-        $trace = $tree->push($this->agentPrompted(text: 'Because of Rayleigh scattering.'));
+        $trace = $this->closed($tree, $this->agentPrompted(text: 'Because of Rayleigh scattering.'));
 
         $this->assertInstanceOf(Trace::class, $trace);
         $this->assertSame('invocation-1', $trace->id);
@@ -56,7 +56,7 @@ class TreeBuilderTest extends TestCase
         $tree->push($this->startingStep(step: 2));
         $tree->push($this->stepCompleted(step: 2, text: 'Second thought.', usage: new TextUsage(30, 40)));
 
-        $trace = $tree->push($this->agentPrompted());
+        $trace = $this->closed($tree, $this->agentPrompted());
 
         $this->assertNotNull($trace);
         $this->assertCount(2, $trace->generations);
@@ -75,7 +75,7 @@ class TreeBuilderTest extends TestCase
         $tree->push($this->invokingTool(arguments: ['city' => 'Utrecht']));
         $tree->push($this->toolInvoked(result: 'sunny', time: 15.0));
 
-        $trace = $tree->push($this->agentPrompted());
+        $trace = $this->closed($tree, $this->agentPrompted());
 
         $this->assertNotNull($trace);
         $this->assertCount(1, $trace->toolCalls);
@@ -90,13 +90,13 @@ class TreeBuilderTest extends TestCase
     {
         $tree = $this->tree();
 
-        $this->assertNull($tree->push(new StreamingAgent('invocation-1', $this->agentPrompt())));
+        $this->assertSame([], $tree->push(new StreamingAgent('invocation-1', $this->agentPrompt())));
 
-        $trace = $tree->push($this->agentPrompted(text: 'Streamed answer.'));
+        $trace = $this->closed($tree, $this->agentPrompted(text: 'Streamed answer.'));
 
         $this->assertNotNull($trace);
         $this->assertSame('Streamed answer.', $trace->completion->output);
-        $this->assertNull($tree->push($this->agentPrompted()));
+        $this->assertSame([], $tree->push($this->agentPrompted()));
     }
 
     #[Test]
@@ -106,7 +106,7 @@ class TreeBuilderTest extends TestCase
         $prompt = $this->agentPrompt(parentInvocationId: 'parent-trace', parentToolInvocationId: 'tool-7');
 
         $tree->push($this->prompting('invocation-2', $prompt));
-        $trace = $tree->push($this->agentPrompted('invocation-2'));
+        $trace = $this->closed($tree, $this->agentPrompted('invocation-2'));
 
         $this->assertNotNull($trace);
         $this->assertSame('parent-trace', $trace->parentTraceId);
@@ -123,7 +123,7 @@ class TreeBuilderTest extends TestCase
         $tree->push($this->invokingTool());
         $tree->push($this->toolInvoked());
 
-        $data = $tree->push($this->agentPrompted())?->toArray();
+        $data = $this->closed($tree, $this->agentPrompted())->toArray();
 
         $this->assertNotNull($data);
         $this->assertSame('invocation-1', $data['id']);
@@ -132,6 +132,14 @@ class TreeBuilderTest extends TestCase
         $this->assertCount(1, $data['generations']);
         $this->assertCount(1, $data['tool_calls']);
         $this->assertArrayHasKey('latency_ms', $data['metrics']);
+    }
+
+    private function closed(TreeBuilder $tree, object $event): Trace
+    {
+        $traces = $tree->push($event);
+        $this->assertCount(1, $traces);
+
+        return $traces[0];
     }
 
     private function tree(): TreeBuilder

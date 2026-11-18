@@ -27,6 +27,7 @@ then `record()` does whatever the plugin wants — queue it, store it, send it.
 The library never stores or transports anything.
 
 The adapter-facing shape is the serialized record (`Trace::toArray()`): ids,
+`complete` (false only for guard-expired traces),
 `model` (`provider`/`model`), `input`, `output`, `metrics` (tokens +
 `latency_ms`), `error`, `started_at`/`ended_at`, and the `generations` and
 `tool_calls` lists. `input` is the trace-level prompt; per-step messages are
@@ -58,7 +59,13 @@ they never re-read laravel/ai.
 - Mirror laravel/ai's `RunContext` behavior: track steps/tool results as
   they happen so a crashed run still yields a partial, accurate trace.
 - A trace always closes: either via `AgentPrompted` (success), `AgentFailed`
-  (error), or a guard timer (e.g. 5 min) in case events are lost.
+  (error), or the guard. The guard is **idle-based**: a trace that no event has
+  touched for `guardSeconds` (default 300) is closed by the next event with
+  `complete: false`, no output, and no error — so a long run that keeps emitting
+  steps survives, while lost terminal events stop leaking. Pass
+  `guardSeconds: null` to `TreeBuilder` to disable it. The guard runs after the
+  event itself is routed, so a terminal event that arrives late still closes its
+  own trace normally.
 - Errors record exception class + message + trace; never the API key.
 - If an observer is not registered, populating records is a no-op — zero
   overhead when observability is disabled.

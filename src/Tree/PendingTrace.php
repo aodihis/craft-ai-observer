@@ -40,6 +40,8 @@ final class PendingTrace
      */
     private array $runningTools = [];
 
+    private DateTimeImmutable $lastActivityAt;
+
     public function __construct(
         private readonly string $id,
         private readonly string $name,
@@ -49,15 +51,48 @@ final class PendingTrace
         private readonly ?string $input,
         private readonly DateTimeImmutable $startedAt
     ) {
+        $this->lastActivityAt = $startedAt;
+    }
+
+    /**
+     * Whether no event has touched this trace for the given number of seconds.
+     */
+    public function isStalled(DateTimeImmutable $now, int $guardSeconds): bool
+    {
+        return ( $now->getTimestamp() - $this->lastActivityAt->getTimestamp() ) >= $guardSeconds;
+    }
+
+    /**
+     * Close a stalled trace without an output or an error, marked incomplete.
+     */
+    public function expire(DateTimeImmutable $now): Trace
+    {
+        return new Trace(
+            id: $this->id,
+            name: $this->name,
+            parentTraceId: $this->parentTraceId,
+            parentToolInvocationId: $this->parentToolInvocationId,
+            model: $this->model,
+            input: $this->input,
+            completion: new Completion(output: null, metrics: $this->totalMetrics(new Metrics(), $now)),
+            startedAt: $this->startedAt,
+            endedAt: $now,
+            generations: $this->generations,
+            toolCalls: $this->toolCalls,
+            complete: false
+        );
     }
 
     public function startStep(int $step, DateTimeImmutable $now): void
     {
+        $this->lastActivityAt = $now;
         $this->runningSteps[$step] = $now;
     }
 
     public function completeStep(int $step, Model $model, Completion $completion, DateTimeImmutable $now): void
     {
+        $this->lastActivityAt = $now;
+
         $this->generations[] = new Generation(
             step: $step,
             model: new Model(
@@ -89,6 +124,7 @@ final class PendingTrace
      */
     public function startTool(string $id, string $name, array $arguments, DateTimeImmutable $now): void
     {
+        $this->lastActivityAt = $now;
         $this->runningTools[$id] = ['name' => $name, 'arguments' => $arguments, 'startedAt' => $now];
     }
 

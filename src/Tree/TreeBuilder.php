@@ -25,30 +25,40 @@ use Laravel\Ai\Prompts\AgentPrompt;
  * Folds laravel/ai events into traces (docs/rules/logic.md).
  *
  * One builder holds the open traces; feed it every event and it returns the
- * trace whenever an event closes one. Unrelated events return null.
+ * traces that event closed — its own, plus any the guard just gave up on.
  */
 final class TreeBuilder
 {
-    /**
-     * @var array<string, PendingTrace>
-     */
-    private array $open = [];
+    private readonly OpenTraces $open;
 
     /**
      * @param null|Closure(): DateTimeImmutable $clock
+     * @param null|int $guardSeconds seconds of inactivity before a trace is closed as incomplete; null disables the guard
      */
     public function __construct(
-        private readonly ?Closure $clock = null
+        private readonly ?Closure $clock = null,
+        private readonly ?int $guardSeconds = 300
     ) {
+        $this->open = new OpenTraces();
     }
 
-    public function push(object $event): ?Trace
+    /**
+     * @return list<Trace> the trace this event closed, then any the guard expired
+     */
+    public function push(object $event): array
     {
         $now = $this->now();
 
-        return (
-            $this->closesTrace($event, $now) ?? $this->changesSteps($event, $now) ?? $this->changesTools($event, $now)
-        );
+        $trace =
+            $this->closesTrace($event, $now) ?? $this->changesSteps($event, $now) ?? $this->changesTools($event, $now);
+
+        $expired = $this->open->expired($now, $this->guardSeconds);
+
+        if ($trace === null) {
+            return $expired;
+        }
+
+        return [$trace, ...$expired];
     }
 
     private function closesTrace(object $event, DateTimeImmutable $now): ?Trace
@@ -141,14 +151,17 @@ final class TreeBuilder
 
     private function openTrace(string $id, AgentPrompt $prompt, DateTimeImmutable $now): ?Trace
     {
-        $this->open[$id] = new PendingTrace(
-            id: $id,
-            name: EventReader::agentName($prompt),
-            parentTraceId: $prompt->parentInvocationId,
-            parentToolInvocationId: $prompt->parentToolInvocationId,
-            model: new Model(provider: EventReader::provider($prompt->provider), model: $prompt->model),
-            input: $prompt->prompt,
-            startedAt: $now
+        $this->open->add(
+            $id,
+            new PendingTrace(
+                id: $id,
+                name: EventReader::agentName($prompt),
+                parentTraceId: $prompt->parentInvocationId,
+                parentToolInvocationId: $prompt->parentToolInvocationId,
+                model: new Model(provider: EventReader::provider($prompt->provider), model: $prompt->model),
+                input: $prompt->prompt,
+                startedAt: $now
+            )
         );
 
         return null;
@@ -156,20 +169,18 @@ final class TreeBuilder
 
     private function closeTrace(string $id, Completion $completion, Model $model, DateTimeImmutable $now): ?Trace
     {
-        $pending = $this->pending($id);
+        $pending = $this->open->remove($id);
 
         if ($pending === null) {
             return null;
         }
-
-        unset($this->open[$id]);
 
         return $pending->close(completion: $completion, model: $model, now: $now);
     }
 
     private function pending(string $id): ?PendingTrace
     {
-        return $this->open[$id] ?? null;
+        return $this->open->find($id);
     }
 
     private function now(): DateTimeImmutable

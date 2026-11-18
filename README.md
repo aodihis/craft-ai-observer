@@ -49,7 +49,8 @@ Event::subscribe(LangfuseListener::class);            // the switch
 Subscribing (rather than `listen()`) resolves the listener once, which is what
 keeps its open traces alive between events. Without that line the package does
 no work at all. The trace carries ids, model, input and output, token metrics
-and latency, error, timestamps, `generations`, and `tool_calls`;
+and latency, error, timestamps, `generations`, `tool_calls`, and `complete`
+(false when the guard closed a stalled trace);
 `Trace::toArray()` is the serialized shape an adapter sends. Storage, queueing,
 transport, credentials and the plugin's own system-log lines all live in the
 subclass.

@@ -70,16 +70,12 @@ abstract class AgentEventListener
     final public function handle(object $event): void
     {
         try {
-            $trace = $this->tree->push($event);
+            foreach ($this->tree->push($event) as $trace) {
+                $prepared = $this->prepare($trace);
 
-            if ($trace === null) {
-                return;
-            }
-
-            $prepared = $this->prepare($trace);
-
-            if ($prepared !== null) {
-                $this->record($prepared);
+                if ($prepared !== null) {
+                    $this->record($prepared);
+                }
             }
         } catch (Throwable $exception) {
             $this->logger->error('AI observer could not record {event}.', [
