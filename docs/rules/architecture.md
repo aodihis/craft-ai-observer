@@ -34,21 +34,31 @@ laravel/ai events (Laravel Event dispatcher)
    library must not block the request).
 6. **Streaming is handled here.** `AgentStreamed` deltas accumulate into a
    pending generation record; the record closes on the terminal step event.
+7. **Craft's system log is the plugin's job.** The library writes its own
+   diagnostics through the injected `Psr\Log\LoggerInterface` and nothing
+   else. Entries in Craft's system log (or any host log) that describe what
+   the observer forwarded belong to the adapter plugin, next to the
+   credentials and the flush it already owns — that keeps the host log free
+   of observer noise when no observer is installed.
+8. **The library registers nothing.** No service provider, no
+   `extra.laravel.providers`, no config file, no `enabled` flag. It exports a
+   listener class, the tree logic, the neutral model, and a `TraceCompleted`
+   event; the plugin calls `Event::listen()` for both. Not registering is what
+   "disabled" means (ADR 0004).
 
 ## Package shape
 
-`Listener/`, `ServiceProvider.php`, `config/` and `tests/` exist;
-`Model/` and `Tree/` are next (the listener is where they get wired).
+`Listener/` and `tests/` exist; `Model/`, `Tree/` and `Events/TraceCompleted`
+are next. There is deliberately no `ServiceProvider` and no `config/` here: the
+package registers nothing, the plugin wires it (ADR 0004).
 
 ```
 craft-ai-observer/
   composer.json
   src/
-    Listener/           # subscribes to laravel/ai events
+    Listener/           # the listener class — registered by the plugin
+    Events/             # TraceCompleted, the adapter-facing contract
     Model/              # Trace, Generation, Span, ToolCall, Metrics
     Tree/               # TreeBuilder, PendingTrace (open/close semantics)
-    ServiceProvider.php # Laravel service provider registering listeners
-  config/
-    ai-observer.php     # enable/disable knobs (defaults on)
   tests/
 ```

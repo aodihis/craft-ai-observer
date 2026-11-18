@@ -18,11 +18,14 @@
 1. PSR-4 namespace: `CraftAiObserver\...`
 2. Listeners must not throw: wrap adapter dispatch in try/catch and log via
    `Psr\Log\LoggerInterface` (injected, never `Log::` facades at package
-   level).
+   level). That logger carries the library's own diagnostics only; writing
+   records into Craft's system log is the adapter plugin's concern
+   (`docs/rules/architecture.md` rule 7).
 3. No database tables, no migrations, no queues (adapters may queue their
    flushes; the library hands them serializable records).
-4. Configuration through the composer package's config file with safe
-   defaults; plugins may prepend their own config.
+4. No package config file and no enable/disable switch: registering the
+   listener is the plugin's decision, so a host that registered nothing pays
+   nothing (ADR 0004).
 5. Records are value objects (readonly), PSR-12, strict_types, typed.
 6. Tests: Pest or PHPUnit, focused on TreeBuilder and event mapping
    (including crash-mid-run and streaming accumulation cases).

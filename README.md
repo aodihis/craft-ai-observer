@@ -16,18 +16,19 @@ constraints (docs workflow, simplicity, what the tooling refuses to accept).
 
 ## Using it in Craft 6
 
-The package registers itself: `composer.json` lists `CraftAiObserver\ServiceProvider`
-under `extra.laravel.providers`, so Laravel's package discovery in a Craft 6
-install boots it with no wiring. It listens to the laravel/ai agent events and
-reports what it receives through the injected `Psr\Log\LoggerInterface` (the
-`debug` level), which is where the normalized records will land next.
+This package registers nothing. It provides the listener class, the trace-building
+logic, and the neutral records; a **plugin** decides whether to use them and
+where the data goes (ADR 0004). Inside a plugin:
 
-```sh
-php craft vendor:publish --tag=ai-observer-config   # optional: copy config/ai-observer.php
+```php
+// Plugin::init() or the plugin's service provider
+Event::listen(AgentEventListener::EVENTS, AgentEventListener::class);
+Event::listen(TraceCompleted::class, ForwardTraceToLangfuse::class);
 ```
 
-Set `AI_OBSERVER_ENABLED=false` (or `'enabled' => false` in the published
-config) to register no listener at all.
+The first line is the switch: without it the package does no work. `TraceCompleted`
+carries the normalized `Trace`; the plugin maps it to its platform, holds the
+credentials, flushes, and writes its own lines to Craft's system log.
 
 ## Development
 

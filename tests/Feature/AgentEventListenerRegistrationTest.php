@@ -18,7 +18,7 @@ use Psr\Log\LoggerInterface;
 class AgentEventListenerRegistrationTest extends TestCase
 {
     #[Test]
-    public function a_laravel_dispatcher_resolves_and_calls_the_listener(): void
+    public function the_host_registers_the_listener_and_the_dispatcher_calls_it(): void
     {
         $logger = new RecordingLogger();
         $container = new Container();
@@ -44,5 +44,29 @@ class AgentEventListenerRegistrationTest extends TestCase
 
         $this->assertSame(StartingStep::class, $record['context']['event']);
         $this->assertSame('invocation-1', $record['context']['trace_id']);
+    }
+
+    #[Test]
+    public function nothing_is_recorded_until_the_host_registers_the_listener(): void
+    {
+        $logger = new RecordingLogger();
+        $container = new Container();
+        $container->instance(LoggerInterface::class, $logger);
+        $events = new Dispatcher($container);
+
+        $events->dispatch(
+            new StartingStep(
+                'invocation-1',
+                1,
+                $this->createStub(Agent::class),
+                $this->createStub(TextProvider::class),
+                'gpt-6-sol',
+                false,
+                [],
+                null
+            )
+        );
+
+        $this->assertFalse($logger->hasRecorded('debug'));
     }
 }

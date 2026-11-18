@@ -90,6 +90,9 @@ Not up for reinterpretation in a PR. Details and rationale live in `docs/rules/`
 5. Streaming deltas accumulate into the open generation; they are not separate records.
 6. `declare(strict_types=1)`, PSR-12, fully typed, PHP `^8.5` only — the floor, the local runtime,
    and CI are all 8.5 (ADR 0003).
+7. The library registers nothing with the host: no service provider, no `extra.laravel.providers`,
+   no config file, no `enabled` flag. Plugins call `Event::listen()` for the listener and for
+   `TraceCompleted`; not registering is what disabled means (ADR 0004).
 
 Breaking one of these is an ADR plus a rule change, never a one-off commit.
 
