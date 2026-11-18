@@ -44,6 +44,11 @@ level = "error"
 [linter.rules.no-shorthand-ternary]
 level = "error"
 
+[linter.rules.excessive-parameter-list]
+# Records are data carriers: their constructors mirror the neutral model
+# (Trace has eleven fields). Behaviour methods keep the default limit of five.
+constructor-threshold = 12
+
 # Custom project rules (see dev/mago/src/Linter/Rules/). The host spawns
 # `.mago/craft-worker.php`, which registers the extension's rules:
 #   craft/comment-placement                comments only above declarations

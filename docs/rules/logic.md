@@ -7,14 +7,31 @@
 
 | laravel/ai | Observer record |
 |---|---|
-| `PromptingAgent` | open `Trace` (id = `invocationId`) |
-| `StartingStep` | open `Generation` under the trace (`stepNumber`) |
+| `PromptingAgent`, `StreamingAgent` | open `Trace` (id = `invocationId`, input = prompt) |
+| `StartingStep` | start `Generation` for the trace (`stepNumber`) |
 | `StepCompleted` | close `Generation` — output, usage, latency, model from `Meta` where the provider reports it |
 | `StepFailed` | close `Generation` with error + latency |
-| `InvokingTool` | open `ToolCall` span → `ToolInvoked` / `ToolFailed` closes it |
-| `AgentPrompted` | close the trace with final response aggregation |
+| `InvokingTool` | open `ToolCall` → `ToolInvoked` / `ToolFailed` closes it |
+| `AgentPrompted`, `AgentStreamed` | close the trace with the final text, usage, and error (if any) |
 | `AgentFailed` | close the trace with error |
-| `AgentStreamed` | accumulate deltas into the open generation; do not close per chunk |
+
+`AgentStreamed` is a terminal event: laravel/ai v1 combines the streaming deltas
+itself and dispatches it once with the combined response, so the trace closes on
+it and no per-chunk record exists. `StreamingAgent` (the start) extends
+`PromptingAgent` and `AgentStreamed` extends `AgentPrompted`; the listener
+returns the trace when an event closes one, and `null` otherwise.
+
+The listener hands the finished trace to its subclass: `prepare()` may trim or
+redact it (`Trace::limit()` is the built-in trimmer, return `null` to drop it),
+then `record()` does whatever the plugin wants — queue it, store it, send it.
+The library never stores or transports anything.
+
+The adapter-facing shape is the serialized record (`Trace::toArray()`): ids,
+`model` (`provider`/`model`), `input`, `output`, `metrics` (tokens +
+`latency_ms`), `error`, `started_at`/`ended_at`, and the `generations` and
+`tool_calls` lists. `input` is the trace-level prompt; per-step messages are
+deliberately not part of v1. Keys are snake_case and stable — adapters map this,
+they never re-read laravel/ai.
 
 ## Hierarchy rules
 

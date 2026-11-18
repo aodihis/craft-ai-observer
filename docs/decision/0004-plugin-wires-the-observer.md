@@ -26,18 +26,42 @@ The package registers **nothing** with the host application:
 
 - no service provider, no `extra.laravel.providers`, no `config/` file, no
   `enabled` flag — "not registered" is what disabled means;
-- it exports a plain, container-resolvable listener class
+- it exports an abstract listener
   (`CraftAiObserver\Listener\AgentEventListener`), the tree logic
-  (`Tree/TraceBuilder`) and the neutral model (`Model/`), and it announces closed
-  traces as a `CraftAiObserver\Events\TraceCompleted` event.
+  (`Tree/TraceBuilder`) and the neutral model (`Model/`). The listener is the
+  extension point: the plugin subclasses it, implements `record(Trace)` and
+  optionally overrides `prepare(Trace)` to trim or redact. The library never
+  stores, queues, or transports anything.
 
 The plugin owns the wiring and the transport:
 
 ```php
 // craft-langfuse-integration, Plugin::init() or its service provider
-Event::listen(AgentEventListener::EVENTS, AgentEventListener::class);
-Event::listen(TraceCompleted::class, ForwardTraceToLangfuse::class);
+Event::subscribe(LangfuseListener::class);
 ```
+
+```php
+final class LangfuseListener extends AgentEventListener
+{
+    protected function prepare(Trace $trace): ?Trace
+    {
+        return $trace->limit(4000);       // or redact; null drops it
+    }
+
+    protected function record(Trace $trace): void
+    {
+        // queue, store, send — the plugin's decision, never the library's
+    }
+}
+```
+
+`record()` is the only abstract method, so the package never decides what
+happens to the data; `prepare()` has a default (pass-through) so adding hooks
+later does not break existing subclasses.
+
+`subscribe()` rather than `listen()`: a class-string listener is resolved per
+dispatch, so each event would get a fresh `TreeBuilder` and no trace would ever
+close. A subscriber is resolved once, and the open traces survive with it.
 
 The first line is the on switch: delete it and the package does no work at all.
 `ForwardTraceToLangfuse` decides which fields are sent, holds the credentials, and
