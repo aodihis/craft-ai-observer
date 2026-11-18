@@ -27,7 +27,8 @@ final readonly class Trace
         public DateTimeImmutable $startedAt,
         public ?DateTimeImmutable $endedAt,
         public array $generations = [],
-        public array $toolCalls = []
+        public array $toolCalls = [],
+        public bool $complete = true
     ) {
     }
 
@@ -52,7 +53,8 @@ final readonly class Trace
             ), $this->generations),
             toolCalls: array_map(static fn(ToolCall $toolCall): ToolCall => $toolCall->limit(
                 $characters
-            ), $this->toolCalls)
+            ), $this->toolCalls),
+            complete: $this->complete
         );
     }
 
@@ -70,7 +72,8 @@ final readonly class Trace
      *     started_at: string,
      *     ended_at: string|null,
      *     generations: list<array<string, mixed>>,
-     *     tool_calls: list<array<string, mixed>>
+     *     tool_calls: list<array<string, mixed>>,
+     *     complete: bool
      * }
      */
     public function toArray(): array
@@ -91,7 +94,8 @@ final readonly class Trace
                 static fn(Generation $generation): array => $generation->toArray(),
                 $this->generations
             ),
-            'tool_calls' => array_map(static fn(ToolCall $toolCall): array => $toolCall->toArray(), $this->toolCalls)
+            'tool_calls' => array_map(static fn(ToolCall $toolCall): array => $toolCall->toArray(), $this->toolCalls),
+            'complete' => $this->complete
         ];
     }
 }

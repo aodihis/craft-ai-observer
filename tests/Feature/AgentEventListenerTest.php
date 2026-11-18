@@ -7,6 +7,7 @@ namespace CraftAiObserver\Tests\Feature;
 use CraftAiObserver\Listener\AgentEventListener;
 use CraftAiObserver\Tests\Support\CreatesAiEvents;
 use CraftAiObserver\Tests\Support\RecordingListener;
+use CraftAiObserver\Tests\Support\MutableClock;
 use CraftAiObserver\Tests\Support\RecordingLogger;
 use CraftAiObserver\Tests\Support\TruncatingListener;
 use CraftAiObserver\Tree\TreeBuilder;
@@ -82,6 +83,22 @@ class AgentEventListenerTest extends TestCase
 
         $this->assertCount(0, $listener->traces);
         $this->assertTrue($logger->hasRecorded('error'));
+    }
+
+    #[Test]
+    public function a_stalled_trace_is_handed_to_the_subclass_as_incomplete(): void
+    {
+        $clock = new MutableClock(new DateTimeImmutable('2026-01-01 12:00:00'));
+        $listener = new RecordingListener(new TreeBuilder(clock: $clock(...)), new RecordingLogger());
+        $events = $this->events($listener);
+
+        $events->dispatch($this->prompting());
+        $clock->tick(301);
+        $events->dispatch($this->agentPrompted('some-other-trace'));
+
+        $this->assertCount(1, $listener->traces);
+        $this->assertSame('invocation-1', $listener->traces[0]->id);
+        $this->assertFalse($listener->traces[0]->complete);
     }
 
     private function events(AgentEventListener $listener): Dispatcher

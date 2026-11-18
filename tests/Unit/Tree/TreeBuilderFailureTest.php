@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace CraftAiObserver\Tests\Unit\Tree;
 
+use CraftAiObserver\Model\Trace;
 use CraftAiObserver\Tests\Support\CreatesAiEvents;
 use CraftAiObserver\Tree\TreeBuilder;
 use DateTimeImmutable;
@@ -21,9 +22,9 @@ class TreeBuilderFailureTest extends TestCase
         $tree = $this->tree();
         $tree->push($this->prompting());
         $tree->push($this->startingStep());
-        $this->assertNull($tree->push($this->stepFailed(error: new RuntimeException('Provider timed out.'))));
+        $this->assertSame([], $tree->push($this->stepFailed(error: new RuntimeException('Provider timed out.'))));
 
-        $trace = $tree->push($this->agentFailed());
+        $trace = $this->closed($tree, $this->agentFailed());
 
         $this->assertNotNull($trace);
         $this->assertCount(1, $trace->generations);
@@ -39,7 +40,7 @@ class TreeBuilderFailureTest extends TestCase
         $tree->push($this->invokingTool(toolInvocationId: 'tool-9'));
         $tree->push($this->toolFailed(toolInvocationId: 'tool-9'));
 
-        $trace = $tree->push($this->agentPrompted());
+        $trace = $this->closed($tree, $this->agentPrompted());
 
         $this->assertNotNull($trace);
         $this->assertSame(RuntimeException::class, $trace->toolCalls[0]->completion->error?->class);
@@ -52,7 +53,7 @@ class TreeBuilderFailureTest extends TestCase
         $tree = $this->tree();
         $tree->push($this->prompting());
 
-        $trace = $tree->push($this->agentFailed(error: new RuntimeException('Provider timed out.')));
+        $trace = $this->closed($tree, $this->agentFailed(error: new RuntimeException('Provider timed out.')));
 
         $this->assertNotNull($trace);
         $error = $trace->completion->error;
@@ -67,9 +68,17 @@ class TreeBuilderFailureTest extends TestCase
     {
         $tree = $this->tree();
 
-        $this->assertNull($tree->push($this->stepCompleted()));
-        $this->assertNull($tree->push($this->toolInvoked()));
-        $this->assertNull($tree->push($this->agentFailed()));
+        $this->assertSame([], $tree->push($this->stepCompleted()));
+        $this->assertSame([], $tree->push($this->toolInvoked()));
+        $this->assertSame([], $tree->push($this->agentFailed()));
+    }
+
+    private function closed(TreeBuilder $tree, object $event): Trace
+    {
+        $traces = $tree->push($event);
+        $this->assertCount(1, $traces);
+
+        return $traces[0];
     }
 
     private function tree(): TreeBuilder
