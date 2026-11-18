@@ -19,7 +19,7 @@ final readonly class CommentText
     }
 
     /**
-     * A docblock whose every line is an `@tag` line, e.g. `/** @var int $x *\/`.
+     * A docblock that opens with an `@tag` line, e.g. `@var` or `@return array{…}`.
      */
     public static function isTagOnly(string $text): bool
     {
@@ -27,20 +27,18 @@ final readonly class CommentText
             return false;
         }
 
-        foreach (self::bodyLines($text) as $line) {
-            if ($line !== '' && !str_starts_with($line, '@')) {
-                return false;
-            }
-        }
-
-        return true;
+        return str_starts_with(self::firstBodyLine($text), '@');
     }
 
     /**
-     * Number of lines that carry human prose (not empty, not `@tag` lines).
+     * Number of lines that carry human prose; a tag block counts as zero.
      */
     public static function proseLineCount(string $text): int
     {
+        if (self::isTagOnly($text)) {
+            return 0;
+        }
+
         $count = 0;
 
         foreach (self::bodyLines($text) as $line) {
@@ -52,6 +50,17 @@ final readonly class CommentText
         }
 
         return $count;
+    }
+
+    private static function firstBodyLine(string $text): string
+    {
+        foreach (self::bodyLines($text) as $line) {
+            if ($line !== '') {
+                return $line;
+            }
+        }
+
+        return '';
     }
 
     /**
